@@ -86,6 +86,12 @@ CONFIG = {
     "bar_bg_hsv_high":  [125, 255, 240],
     "bar_min_area":     400,
 
+    # Bar white border (distinguishes the actual bar from blue game world)
+    "bar_border_hsv_low":    [0,   0, 200],
+    "bar_border_hsv_high":   [179, 40, 255],
+    "bar_border_min_pixels": 40,
+    "bar_border_edge_px":    10,     # how many pixels from the edge to check
+
     # "Take Fish" button — same bright green as bite icon
     "take_fish_hsv_low":  [38, 120, 120],
     "take_fish_hsv_high": [90, 255, 255],
@@ -240,9 +246,25 @@ def detect_green_icon(img: np.ndarray, cfg: dict):
 
 
 def detect_bar_visible(img: np.ndarray, cfg: dict):
-    """Check whether the minigame bar is on-screen (blue background)."""
-    mask = hsv_mask(img, cfg["bar_bg_hsv_low"], cfg["bar_bg_hsv_high"])
-    return px_count(mask) >= cfg["bar_min_area"], mask
+    """Check whether the minigame bar is on-screen.
+    Requires BOTH blue background pixels AND white border pixels at
+    the top/bottom edges.  The game world may contain blue, but it
+    won't have the bar's white border in the exact same region.
+    """
+    bg_mask = hsv_mask(img, cfg["bar_bg_hsv_low"], cfg["bar_bg_hsv_high"])
+    if px_count(bg_mask) < cfg["bar_min_area"]:
+        return False, bg_mask
+
+    border_mask = hsv_mask(
+        img, cfg["bar_border_hsv_low"], cfg["bar_border_hsv_high"]
+    )
+    e = cfg["bar_border_edge_px"]
+    h = img.shape[0]
+    top_px    = px_count(border_mask[:e, :])
+    bottom_px = px_count(border_mask[h - e:, :])
+    border_ok = (top_px + bottom_px) >= cfg["bar_border_min_pixels"]
+
+    return border_ok, bg_mask
 
 
 def detect_cube_in_bar(img: np.ndarray, cfg: dict):
