@@ -92,7 +92,7 @@ CONFIG = {
     "take_fish_min_area": 100,
 
     # ---- Steering ---------------------------------------------------------
-    "dead_zone":  15,          # px tolerance before steering
+    "dead_zone":  5,          # px tolerance before steering
     "key_left":   "a",
     "key_right":  "d",
     "key_hook":   "space",
@@ -105,8 +105,8 @@ CONFIG = {
     "post_take_delay":   1.0,
     "bar_grace_period":  1.5,     # time for bar to appear after hooking
     "bar_gone_frames":   12,      # consecutive frames w/o bar → fish escaped
-    "catch_confirm_frames": 4,    # consecutive green-icon frames needed to trigger catch
-    "catch_verify_delay":   0.5,  # seconds to wait after space before verifying catch
+    "catch_confirm_frames": 1,    # react on first green-icon frame (instant)
+    "catch_verify_delay":   1.2,  # seconds to wait after space before verifying catch
     "verify_delay":      0.4,     # seconds to wait before verifying an action succeeded
     "max_retries":       3,       # how many times to retry a failed action
     "startup_delay":     3,
@@ -675,20 +675,24 @@ def main():
                         catch_confirm_count = 0
 
                     if catch_confirm_count >= cfg["catch_confirm_frames"]:
+                        # INSTANT — no random delay for catching
                         release_keys(cfg)
-                        d = random_action_delay(cfg)
-                        print(f"[CATCH] Green icon confirmed "
-                              f"({catch_confirm_count} frames) — "
-                              f"pressing space (+{d:.2f}s)")
                         pydirectinput.press(cfg["key_hook"])
+                        print("[CATCH] Green icon — space pressed INSTANTLY")
                         catch_confirm_count = 0
 
-                        # Verify the catch actually succeeded by re-checking
-                        # the bar after a short delay.  If the bar is still
-                        # visible the fish got away — keep playing.
+                        # Two-pass verify: give the game enough time to
+                        # transition out of the minigame bar.
                         time.sleep(cfg["catch_verify_delay"])
-                        verify_img = screenshot_region(sct, cfg["bar_region"])
-                        bar_still, _ = detect_bar_visible(verify_img, cfg)
+                        v1 = screenshot_region(sct, cfg["bar_region"])
+                        bar_still, _ = detect_bar_visible(v1, cfg)
+
+                        if bar_still:
+                            # Second check — the game might still be
+                            # animating the transition.
+                            time.sleep(0.6)
+                            v2 = screenshot_region(sct, cfg["bar_region"])
+                            bar_still, _ = detect_bar_visible(v2, cfg)
 
                         if not bar_still:
                             fish_caught += 1
