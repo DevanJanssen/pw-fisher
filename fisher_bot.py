@@ -45,7 +45,7 @@ CONFIG = {
     # ---- Screen regions {"left", "top", "width", "height"} ----------------
     "bobber_region":    {"left": 1000, "top": 650,  "width": 200,  "height": 165},
     "bite_region":      {"left": 1620, "top": 825,  "width": 190,  "height": 180},
-    "bar_region":       {"left": 425,  "top": 156,  "width": 1035, "height": 94},
+    "bar_region":       {"left": 420,  "top": 170,  "width": 1040, "height": 80},
     "progress_region":  {"left": 600,  "top": 250,  "width": 700,  "height": 75},
     "take_fish_region": {"left": 785,  "top": 815,  "width": 315,  "height": 85},
 
