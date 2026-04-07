@@ -112,6 +112,7 @@ CONFIG = {
     "bar_grace_period":  1.5,     # time for bar to appear after hooking
     "bar_gone_frames":   12,      # consecutive frames w/o bar → fish escaped
     "catch_confirm_frames": 1,    # react on first green-icon frame (instant)
+    "catch_min_elapsed":    4.0,  # ignore green catch icon for this long after minigame starts
     "catch_verify_delay":   1.2,  # seconds to wait after space before verifying catch
     "verify_delay":      0.4,     # seconds to wait before verifying an action succeeded
     "max_retries":       3,       # how many times to retry a failed action
@@ -691,7 +692,7 @@ def main():
                         prog_ratio, _ = detect_progress_full(progress_img, cfg)
 
                     # --- catch-ready? (green icon reappears) ---
-                    if bite_det:
+                    if bite_det and mg_elapsed > cfg["catch_min_elapsed"]:
                         catch_confirm_count += 1
                     else:
                         catch_confirm_count = 0
@@ -732,9 +733,23 @@ def main():
                     if mg_elapsed > cfg["bar_grace_period"]:
                         bar_gone_count += 1
                         if bar_gone_count >= cfg["bar_gone_frames"]:
-                            print("[ESC] Bar gone — fish escaped")
                             release_keys(cfg)
-                            state = State.IDLE
+                            time.sleep(0.3)
+                            tf_img = screenshot_region(
+                                sct, cfg["take_fish_region"]
+                            )
+                            tf_det, _, _ = detect_take_fish_button(tf_img, cfg)
+                            if tf_det:
+                                fish_caught += 1
+                                print(f"[CATCH] Fish #{fish_caught} caught! "
+                                      "(bar cleared)")
+                                take_fish_start = time.time()
+                                state = State.TAKE_FISH
+                                print("[TAKE] Waiting for Take Fish "
+                                      "button …")
+                            else:
+                                print("[ESC] Bar gone — fish escaped")
+                                state = State.IDLE
 
             elif state == State.TAKE_FISH:
                 if take_fish_img is not None:
