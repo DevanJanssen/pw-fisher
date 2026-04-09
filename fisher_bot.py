@@ -624,6 +624,7 @@ def main():
             elif state == State.WAITING_FOR_BITE:
                 if bite_det:
                     hooked = False
+                    got_item = False
                     for attempt in range(1, cfg["max_retries"] + 1):
                         d = random_action_delay(cfg)
                         print(f"[BITE] Green icon ({bite_cnt} px) — hooking! "
@@ -638,13 +639,31 @@ def main():
                             print("[BITE] OK — bar appeared, minigame started")
                             hooked = True
                             break
-                        print("[BITE] Bar not visible yet — retrying")
+
+                        tf_img = screenshot_region(
+                            sct, cfg["take_fish_region"]
+                        )
+                        tf_det, _, _ = detect_take_fish_button(tf_img, cfg)
+                        if tf_det:
+                            print("[BITE] OK — item button appeared, "
+                                  "going to TAKE_FISH")
+                            got_item = True
+                            break
+
+                        print("[BITE] Neither bar nor item button "
+                              "appeared — retrying")
 
                     if hooked:
                         minigame_start = time.time()
                         bar_gone_count = 0
                         catch_confirm_count = 0
                         state = State.HOOKED_MINIGAME
+                    elif got_item:
+                        fish_caught += 1
+                        print(f"[CATCH] Item/fish #{fish_caught} received!")
+                        take_fish_start = time.time()
+                        state = State.TAKE_FISH
+                        print("[TAKE] Waiting for Take Fish button …")
                     else:
                         print("[BITE] Bar never appeared — resetting to IDLE")
                         state = State.IDLE
